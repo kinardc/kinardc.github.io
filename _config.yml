@@ -1,3 +1,6 @@
+title: CIS 367 -- Chase Kinard
+description: Assignment submissions for CIS 367.01 (W23).
+
 remote_theme: pages-themes/slate@v0.2.0
 plugins:
 - jekyll-remote-theme
