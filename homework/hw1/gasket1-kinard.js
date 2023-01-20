@@ -3,7 +3,7 @@
 var gl;
 var points;
 
-var NumPoints = 10000;  // Q1
+var NumPoints = 100000;  // Q1
 
 window.onload = function init()
 {
