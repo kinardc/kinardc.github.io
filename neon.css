@@ -1,0 +1,36 @@
+/* 
+Chase Kinard 
+- Reference: https://codepen.io/FelixRilling/pen/oNNLMb 
+*/
+
+
+body {
+    background-color: black;
+}
+body * {
+    color: white;
+    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    animation: neon 5s infinite alternate;
+}
+
+
+@keyframes neon {
+    from {
+        text-shadow: 
+            0 0 5px white,
+            0 0 10px white,
+            0 0 15px white,
+            0 0 30px blueviolet,
+            0 0 40px blueviolet,
+            0 0 50px blueviolet;
+    }
+    to {
+        text-shadow: 
+            0 0 10px white,
+            0 0 20px white,
+            0 0 30px white,
+            0 0 40px blueviolet,
+            0 0 45px blueviolet,
+            0 0 50px blueviolet;
+    }
+}
