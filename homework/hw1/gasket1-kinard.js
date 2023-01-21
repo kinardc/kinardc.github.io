@@ -3,7 +3,15 @@
 var gl;
 var points;
 
-var NumPoints = 5000;
+var NumPoints = 50000;
+
+// This function returns a random floating point number 
+// in between a specified minimum and maximum value. In 
+// contrast, the Math.random() function returns a random 
+// float on the range of[0.0, 1.0].
+function getRandomArbitrary(min, max) { 
+    return Math.random() * (max - min) + min; 
+}
 
 window.onload = function init()
 {
@@ -19,9 +27,15 @@ window.onload = function init()
     // First, initialize the corners of our gasket with three points.
 
     var vertices = [
-        vec2( -1,  1 ),
-        vec2(  0, -1 ),
-        vec2(  1,  1 )
+        vec2(  1, -1 ),
+        vec2(  0,  1 ),
+        vec2( -1, -1 )
+        // vec2( -1,  1 ),
+        // vec2(  0, -1 ),
+        // vec2(  1,  1 )
+        // vec2(  1, -1 ),
+        // vec2( -1,  0 ),
+        // vec2(  1,  1 )
     ];
 
     // Specify a starting point p for our iterations
@@ -41,8 +55,13 @@ window.onload = function init()
 
     for ( var i = 0; points.length < NumPoints; ++i ) {
         var j = Math.floor(Math.random() * 3);
-        p = add( points[i], vertices[j] );
-        p = scale( 0.5, p );
+        p = add(points[i], vertices[j]);
+        // Let's muck around with the bisector, shall we ?
+        // p = scale( 0.5, p );
+        // p = scale( Math.random(), p );
+        p = scale(getRandomArbitrary(0, 0.5), p);
+        // p = scale(getRandomArbitrary(0.5, 1), p);
+        // p = scale( getRandomArbitrary(-1, 2), p );
         points.push( p );
     }
 
