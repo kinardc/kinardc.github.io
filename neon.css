@@ -10,6 +10,11 @@ body {
 body * {
     color: white;
     font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+}
+h1 {
+    animation: neon 5s infinite alternate;
+}
+h2 {
     animation: neon 5s infinite alternate;
 }
 
