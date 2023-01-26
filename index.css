@@ -9,12 +9,14 @@ body {
 }
 body * {
     color: white;
-    font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 h1 {
+    color: white;
     animation: neon 5s infinite alternate;
 }
 h2 {
+    color: black;
     animation: neon 5s infinite alternate;
 }
 
