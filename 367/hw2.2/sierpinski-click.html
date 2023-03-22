@@ -3,7 +3,8 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
 <title>2D Sierpinski Gasket</title>
-<link rel="icon" type="image/x-icon" href="../../../../gvsu-icon.ico">
+<link rel="icon" type="image/x-icon" href="../../gvsu-icon.ico">
+
 
 <script id="vertex-shader" type="x-shader/x-vertex">
 attribute vec4 vPosition;
@@ -11,7 +12,6 @@ attribute vec4 vPosition;
 void
 main()
 {
-	gl_PointSize = 2.0;
     gl_Position = vPosition;
 }
 </script>
@@ -22,17 +22,22 @@ precision mediump float;
 void
 main()
 {
-    gl_FragColor = vec4( 0.0, 1.0, 0.0, 1.0 );  
+    gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0 );
 }
 </script>
 
 <script type="text/javascript" src="../Common/webgl-utils.js"></script>
 <script type="text/javascript" src="../Common/initShaders.js"></script>
 <script type="text/javascript" src="../Common/MV.js"></script>
-<script type="text/javascript" src="gasket1-kinard.js"></script>
+<script type="text/javascript" src="sierpinski-click.js"></script>
 </head>
 
 <body>
+<div>
+recursive steps  0 <input id="slider" type="range"
+ min= "0" max= "6" step = "1" value = "0" />
+ 6
+</div>
 <canvas id="gl-canvas" width="512" height="512">
 Oops ... your browser doesn't support the HTML5 canvas element
 </canvas>

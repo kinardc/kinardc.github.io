@@ -3,16 +3,23 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" >
 <title>2D Sierpinski Gasket</title>
+<link rel="icon" type="image/x-icon" href="../../gvsu-icon.ico">
 
 
 <script id="vertex-shader" type="x-shader/x-vertex">
-attribute vec4 vPosition;
+  attribute vec4 vPosition;
+  
+  uniform float theta;
 
-void
-main()
-{
-    gl_Position = vPosition;
-}
+  void main() {
+    float sin = sin(theta);
+    float cos = cos(theta);
+
+    gl_Position.x = (cos * vPosition.x) - (sin * vPosition.y);
+    gl_Position.y = (sin * vPosition.x) + (cos * vPosition.y);
+    gl_Position.z = 0.0;
+    gl_Position.w = 1.0;
+  }
 </script>
 
 <script id="fragment-shader" type="x-shader/x-fragment">
@@ -21,14 +28,14 @@ precision mediump float;
 void
 main()
 {
-    gl_FragColor = vec4( 1.0, 0.0, 0.0, 1.0 );
+    gl_FragColor = vec4( 1.0, 0.0, 1.0, 1.0 );
 }
 </script>
 
 <script type="text/javascript" src="../Common/webgl-utils.js"></script>
 <script type="text/javascript" src="../Common/initShaders.js"></script>
 <script type="text/javascript" src="../Common/MV.js"></script>
-<script type="text/javascript" src="sierpinski-click.js"></script>
+<script type="text/javascript" src="gasket-extended.js"></script>
 </head>
 
 <body>
