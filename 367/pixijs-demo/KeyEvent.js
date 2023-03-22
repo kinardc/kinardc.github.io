@@ -2,6 +2,7 @@
 Chase Kinard
 - Create event handlers/listeners associated with
   the keyboard.
+- Based on https://github.com/kittykatattack/learningPixi
 */
 
 export default class KeyEvent {
