@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { Delaunay } from "https://cdn.skypack.dev/d3-delaunay@6";
 import { createNoise2D } from "https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm";
-import { max, mirrorArray, modulate } from './helpers.mjs';
 
 /* Important Variables */
 const windowHeight = window.innerHeight,
@@ -12,6 +11,10 @@ const leftBound = -aspectRatio * 2,
     rightBound = aspectRatio * 2,
     topBound = 2,
     bottomBound = -2;
+console.log('left:   ', leftBound);
+console.log('right:  ', rightBound);
+console.log('top:    ', topBound);
+console.log('bottom: ', bottomBound);
 
 /**
  * Generate a circular region of random points for a voronoi diagram.
@@ -107,7 +110,6 @@ function getPointsMesh(points, color) {
 
 
 
-
 function initRenderer() {
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -115,6 +117,23 @@ function initRenderer() {
     document.getElementById('container').appendChild( renderer.domElement );
     return renderer;
 }
+
+function fractionate(val, minVal, maxVal) {
+    // console.log('in voronoi#fractionate: ', val, minVal, maxVal);
+    return (val - minVal)/(maxVal - minVal);
+}
+
+function modulate(val, minVal, maxVal, outMin, outMax) {
+    var fr = fractionate(val, minVal, maxVal);
+    var delta = outMax - outMin;
+    // console.log('in voronoi#modulate: ', val, minVal, maxVal, outMin, outMax, fr, delta);
+    return outMin + (fr * delta);
+}
+
+function max(typedArray) {
+    return typedArray.reduce( (a, b) => Math.max(a, b) );
+}
+
 
 function start() {
 
@@ -136,21 +155,20 @@ function start() {
     ];
 
     /* Voronoi */
-    // var regions = getVoronoiRegions(points);
-    // var hull = getVoronoiHull(points);
-    // var hullPoints = points.filter( (_, i) => hull.includes(i) );
+    var regions = getVoronoiRegions(points);
+    var hull = getVoronoiHull(points);
+    var hullPoints = points.filter( (_, i) => hull.includes(i) );
     
     /* Meshes */
     var regionPointMesh = getPointsMesh(points, 0xFF0000);
     scene.add(regionPointMesh);
-    // var hullPointMesh = getPointsMesh(hullPoints, 0x00FF00);
-    // scene.add(hullPointMesh);
-    // var regionBorderMeshes = getAllRegionBorderMeshes(regions);
-    // for (let i = 0; i < regions.length; ++i) {
-    //     scene.add(regionBorderMeshes[i]);
-    // }
+    var hullPointMesh = getPointsMesh(hullPoints, 0x00FF00);
+    scene.add(hullPointMesh);
+    var regionBorderMeshes = getAllRegionBorderMeshes(regions);
+    for (let i = 0; i < regions.length; ++i) {
+        scene.add(regionBorderMeshes[i]);
+    }
     renderer.render( scene, camera );
-    regionPointMesh.geometry.attributes.position.needsUpdate = true;
 
     /* Audio */
     const audio = document.getElementById('audio-controls');
@@ -172,34 +190,46 @@ function start() {
         /* Render */
         const clock = new THREE.Clock(true);
         const noise = createNoise2D();
+        // console.log(points);
 
         function animate() {
-            // scene.clear();
+            scene.clear();
 
             const time = clock.getElapsedTime();                              
             analyzer.getByteFrequencyData(frequencyBinData);
-
             var lowerHalfArray = frequencyBinData.slice(0, (frequencyBinData.length/2));
             var upperHalfArray = frequencyBinData.slice((frequencyBinData.length/2) - 1, frequencyBinData.length - 1);
-            var middleHalfArray = frequencyBinData.slice((frequencyBinData.length/4) - 1, frequencyBinData.length - 1 - (frequencyBinData.length/4));
-            var mirroredArray = mirrorArray(middleHalfArray);
-            console.log(mirroredArray);
+            var mirroredArray = [...lowerHalfArray, ...lowerHalfArray.reverse()]
+
+            var pointsCopy = points.map( (v) => new THREE.Vector3(v.x, v.y, v.z) );
             
             let step = 2 * Math.PI / 32;
-            const positions = regionPointMesh.geometry.attributes.position.array;
-            let index = 0;
-            for (let i = 0; i < 32; i++) {
+            let maxFreq = max(frequencyBinData);
+            for (let i = 0; i < 32; ++i) {
                 const theta = step * i,
                     x = points[i].x,
                     y = points[i].y,
-                    offsetX = modulate(3*mirroredArray[i] + noise(x + time*0.01, y + time*0.01)*mirroredArray[i], 0, 255, 0, 1.0 - 0.2 - 0.5) * Math.cos(theta),
-                    offsetY = modulate(3*mirroredArray[i] + noise(x + time*0.01, y + time*0.01)*mirroredArray[i], 0, 255, 0, 1.0 - 0.2 - 0.5) * Math.sin(theta);
-                    
-                positions[index++] = x + offsetX;
-                positions[index++] = y + offsetY;
-                positions[index++] = 0;
+                    offsetX = modulate(mirroredArray[i] + noise(x + time*0.1, y + time*0.1)*mirroredArray[i], 0, 255, 0, 1.0 - 0.2 - 0.5) * Math.cos(theta),
+                    offsetY = modulate(mirroredArray[i] + noise(x + time*0.1, y + time*0.1)*mirroredArray[i], 0, 255, 0, 1.0 - 0.2 - 0.5) * Math.sin(theta);
+                pointsCopy[i].x = x + offsetX;
+                pointsCopy[i].y = y + offsetY;
+                // console.log(noise(x, y));
             }
-            regionPointMesh.geometry.attributes.position.needsUpdate = true;
+
+            // regions = getVoronoiRegions(pointsCopy);
+            // if (!regions) { console.log('exiting!'); return; }
+            // hull = getVoronoiHull(pointsCopy);
+            // hullPoints = pointsCopy.filter( (_, i) => hull.includes(i) );
+
+            /* Meshes */
+            regionPointMesh = getPointsMesh(pointsCopy, 0xFF0000);
+            scene.add(regionPointMesh);
+            // hullPointMesh = getPointsMesh(hullPoints, 0x00FF00);
+            // scene.add(hullPointMesh);
+            // regionBorderMeshes = getAllRegionBorderMeshes(regions);
+            // for (let i = 0; i < regions.length; ++i) {
+            //     scene.add(regionBorderMeshes[i]);
+            // }
 
             requestAnimationFrame( animate );
             renderer.render( scene, camera );
@@ -208,3 +238,5 @@ function start() {
     });    
 }
 start();
+
+// console.log(modulate(100, 0, 1000, 0, 1));
