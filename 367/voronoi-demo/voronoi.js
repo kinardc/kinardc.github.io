@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { Delaunay } from "https://cdn.skypack.dev/d3-delaunay@6";
 import { createNoise2D } from "https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm";
-import { max, mirrorArray, modulate } from './helpers.mjs';
+import { avg, max, modulate } from './helpers.mjs';
 
 /* Important Variables */
+const noise = createNoise2D();
+
 const windowHeight = window.innerHeight,
     windowWidth = window.innerWidth,
     aspectRatio = windowWidth / windowHeight;
@@ -22,8 +24,9 @@ const leftBound = -aspectRatio * 2,
  */
 function generateRandomPoints(n, r) {
     const points = [];
+    const innerGap = 0.5;
     for (let i = 0; i < n; ++i) {
-        const radius = r * Math.sqrt(Math.random()),
+        const radius = ((r - innerGap) * Math.sqrt(Math.random())) + innerGap,
             theta = 2 * Math.PI * Math.random(),
             xy = new THREE.Vector3(radius * Math.cos(theta), radius * Math.sin(theta), 0);
         points.push(xy);
@@ -37,59 +40,13 @@ function generateCircumferencePoints(n, r) {
         const radius = r,
             // theta = 2 * Math.PI * Math.random(),
             theta = i,
-            xy = new THREE.Vector3(radius * Math.cos(theta), radius * Math.sin(theta), 0);
+            x = radius * Math.cos(theta),
+            y = radius * Math.sin(theta),
+            noiseXY = noise(x, y),
+            xy = new THREE.Vector3(x*noiseXY*0.1 + x, y*noiseXY*0.1 + y, 0);
         points.push(xy);
     }
     return points;
-}
-
-/**
- * Get voronoi regions (sets of vertices) from a set of points.
- * @param { THREE.Vector3[] } points
- * @returns { THREE.Vector3[][] }
- */
-function getVoronoiRegions(points) {
-    const delaunay = Delaunay.from(points.map( (v) => [ v.x, v.y ] )),
-        boundingBox = [leftBound, bottomBound, rightBound, topBound],
-        voronoi = delaunay.voronoi(boundingBox),
-        polygons = [];
-    for (let i = 0; i < points.length; ++i) {
-        const polygon = voronoi.cellPolygon(i).map( (v) => new THREE.Vector3(v[0], v[1], 0) );
-        polygons.push(polygon);
-    }
-    return polygons;
-}
-
-function getVoronoiHull(points) {
-    const delaunay = Delaunay.from(points.map((v) => [v.x, v.y])),
-        hull = delaunay.hull;
-    return hull;
-}
-
-// GEOMETRY
-/**
- * Generate region edge mesh and add to scene.
- * @param { THREE.Vector3[] } vertices The voronoi vertices of a region.
- * @returns { THREE.Line } The mesh of the region border.
- */
-function getRegionBorderMesh(vertices) {
-    const geometry = new THREE.BufferGeometry().setFromPoints(vertices),
-        material = new THREE.LineBasicMaterial({ color: 0xFFFFFF }),
-        mesh = new THREE.Line(geometry, material);
-    return mesh;
-}
-
-/**
- * Draw the meshes of all regions in the voronoi diagram.
- * @param { THREE.Vector3[][] } regions An array of voronoi region vertex arrays
- * @returns { THREE.Line[] } An array of region border meshes
- */
-function getAllRegionBorderMeshes(regions) {
-    const meshes = [];
-    for (let i = 0; i < regions.length; ++i) {
-        meshes.push( getRegionBorderMesh(regions[i]) );
-    }
-    return meshes;
 }
 
 /**
@@ -103,7 +60,12 @@ function getPointsMesh(points, color) {
         mesh = new THREE.Points(geometry, material);
     return mesh;
 }
-
+function getLineLoopMesh(points, color) {
+    const geometry = new THREE.BufferGeometry().setFromPoints(points),
+        material = new THREE.PointsMaterial({ color: color, size: 5 }),
+        mesh = new THREE.LineLoop(geometry, material);
+    return mesh;
+}
 
 
 
@@ -130,31 +92,26 @@ function start() {
     camera.position.set(0, 0, -1);
     camera.lookAt(0, 0, 0);
 
-    var points = [
-        ...generateCircumferencePoints(32, topBound * 0.5),
-        new THREE.Vector3(0, 0, 0)
-    ];
-
-    /* Voronoi */
-    // var regions = getVoronoiRegions(points);
-    // var hull = getVoronoiHull(points);
-    // var hullPoints = points.filter( (_, i) => hull.includes(i) );
-    
     /* Meshes */
-    var regionPointMesh = getPointsMesh(points, 0xFF0000);
-    scene.add(regionPointMesh);
-    // var hullPointMesh = getPointsMesh(hullPoints, 0x00FF00);
-    // scene.add(hullPointMesh);
-    // var regionBorderMeshes = getAllRegionBorderMeshes(regions);
-    // for (let i = 0; i < regions.length; ++i) {
-    //     scene.add(regionBorderMeshes[i]);
-    // }
+    const fftSize = 512;
+
+    var middlePoints = generateCircumferencePoints(128, 1.0);
+    var middleMesh = getLineLoopMesh(middlePoints, 0xFF00FF);
+    scene.add(middleMesh);
+
+    var outerPoints = generateCircumferencePoints(128, 1.5);
+    var outerMesh = getLineLoopMesh(outerPoints, 0xFFFF00);
+    scene.add(outerMesh);
+
+    var innerPoints = generateCircumferencePoints(128, 0.5);
+    var innerMesh = getLineLoopMesh(innerPoints, 0x00FFFF);
+    scene.add(innerMesh);
+
     renderer.render( scene, camera );
-    regionPointMesh.geometry.attributes.position.needsUpdate = true;
 
     /* Audio */
     const audio = document.getElementById('audio-controls');
-    audio.src = 'audio/things-id-do-for-u.mp3';
+    audio.src = 'audio/control.mp3';
     var audioSource, analyzer, bufferLength, frequencyBinData;
     audio.addEventListener('playing', function () {
         const audioContext = new AudioContext();
@@ -165,41 +122,76 @@ function start() {
         audioSource.connect(analyzer);                                  // Expose analyzer to audio element
         analyzer.connect(audioContext.destination);                     // Expose default audio output device to analyzer
         
-        analyzer.fftSize = 64;                                          // Number of samples
+        analyzer.fftSize = fftSize;                                         // Number of samples
         bufferLength = analyzer.frequencyBinCount;                      // Number of nodes to draw (always fftSize/2)
         frequencyBinData = new Uint8Array(bufferLength);                // Frequency data must be stored as uint8
         
         /* Render */
         const clock = new THREE.Clock(true);
-        const noise = createNoise2D();
+        // const noise = createNoise2D();
 
         function animate() {
             // scene.clear();
 
-            const time = clock.getElapsedTime();                              
             analyzer.getByteFrequencyData(frequencyBinData);
 
-            var lowerHalfArray = frequencyBinData.slice(0, (frequencyBinData.length/2));
-            var upperHalfArray = frequencyBinData.slice((frequencyBinData.length/2) - 1, frequencyBinData.length - 1);
-            var middleHalfArray = frequencyBinData.slice((frequencyBinData.length/4) - 1, frequencyBinData.length - 1 - (frequencyBinData.length/4));
-            var mirroredArray = mirrorArray(middleHalfArray);
-            console.log(mirroredArray);
+            var lowerHalfArray = frequencyBinData.slice(0, (frequencyBinData.length/3));
+            var upperHalfArray = frequencyBinData.slice(2*(frequencyBinData.length/3) - 1, frequencyBinData.length - 1);
+            var middleHalfArray = frequencyBinData.slice((frequencyBinData.length/3) - 1, frequencyBinData.length - 1 - (frequencyBinData.length/3));
+            var lowerHalfAverage = avg(lowerHalfArray),
+                lowerHalfMax = max(lowerHalfArray),
+                middleHalfAverage = avg(middleHalfArray),
+                middleHalfMax = avg(middleHalfArray),
+                upperHalfAverage = avg(upperHalfArray),
+                upperHalfMax = max(upperHalfArray);
             
-            let step = 2 * Math.PI / 32;
-            const positions = regionPointMesh.geometry.attributes.position.array;
-            let index = 0;
-            for (let i = 0; i < 32; i++) {
-                const theta = step * i,
-                    x = points[i].x,
-                    y = points[i].y,
-                    offsetX = modulate(3*mirroredArray[i] + noise(x + time*0.01, y + time*0.01)*mirroredArray[i], 0, 255, 0, 1.0 - 0.2 - 0.5) * Math.cos(theta),
-                    offsetY = modulate(3*mirroredArray[i] + noise(x + time*0.01, y + time*0.01)*mirroredArray[i], 0, 255, 0, 1.0 - 0.2 - 0.5) * Math.sin(theta);
-                    
-                positions[index++] = x + offsetX;
-                positions[index++] = y + offsetY;
-                positions[index++] = 0;
+            // console.log(upperHalfMax);
+            
+            const maxFrequency = 255,
+                step = 2 * Math.PI / 128;
+            
+            function updatePoint(point, freq, theta, radius) {
+                const time = clock.getElapsedTime();
+                const amplitude = 2,
+                    x = point.x,
+                    y = point.y,
+                    noiseXY = noise(x + time*0.1, y + time*0.1),
+                    offsetX = modulate(amplitude*freq, 0, (amplitude + 1)*maxFrequency, 0, radius) * Math.abs(noiseXY*Math.cos(theta)),
+                    offsetY = modulate(amplitude*freq, 0, (amplitude + 1)*maxFrequency, 0, radius) * Math.abs(noiseXY*Math.sin(theta));
+                return [ x + offsetX, y + offsetY ];
             }
-            regionPointMesh.geometry.attributes.position.needsUpdate = true;
+            
+            const lowerPositions = outerMesh.geometry.attributes.position.array,
+                middlePositions = middleMesh.geometry.attributes.position.array,
+                upperPositions = innerMesh.geometry.attributes.position.array;
+            let index = 0;
+            for (let i = 0; i < 128; i++) {
+                const theta = step + i,
+                    bassFrequency = lowerHalfMax,
+                    midsFrequency = middleHalfAverage,
+                    trebleFrequency = upperHalfMax;
+                const [bassX, bassY] = updatePoint(outerPoints[i], bassFrequency, theta, 0.5),
+                    [midsX, midsY] = updatePoint(middlePoints[i], midsFrequency, theta, 0.5),
+                    [trebleX, trebleY] = updatePoint(innerPoints[i], trebleFrequency, theta, 1.0);
+
+                lowerPositions[index] = bassX;
+                middlePositions[index] = midsX;
+                upperPositions[index] = trebleX;
+                index++;
+
+                lowerPositions[index] = bassY;
+                middlePositions[index] = midsY;
+                upperPositions[index] = trebleY;
+                index++;
+
+                lowerPositions[index] = 0;
+                middlePositions[index] = 0;
+                upperPositions[index] = 0;
+                index++;
+            }
+            innerMesh.geometry.attributes.position.needsUpdate = true;
+            middleMesh.geometry.attributes.position.needsUpdate = true;
+            outerMesh.geometry.attributes.position.needsUpdate = true;
 
             requestAnimationFrame( animate );
             renderer.render( scene, camera );

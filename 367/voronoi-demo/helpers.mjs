@@ -11,6 +11,10 @@ export function max(typedArray) {
     return typedArray.reduce( (a, b) => Math.max(a, b) );
 }
 
+export function avg(typedArray) {
+    return typedArray.reduce( (a, b) => a + b ) / typedArray.length;
+}
+
 export function mirrorArray(typedArray) {
     return [...typedArray, ...typedArray.reverse()];
 }
