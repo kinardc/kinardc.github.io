@@ -1,0 +1,28 @@
+body {
+    margin: 0px;
+    padding: 0px;
+}
+* {
+    font-family: Megrim;
+    color: #F0F0F0;
+}
+#visualizer-controls, #audio-controls-container {
+    display: flex;
+    flex-direction: column;
+}
+#visualizer-controls, #audio-controls-container, hr { border-radius: 5px; }
+#audio-controls-container, hr { border-style: inset; }
+#audio-controls-container, #audio-controls-container > * { flex: content; }
+#audio-controls-container { overflow: hidden; }
+#visualizer-controls {
+    position: absolute;
+    padding: 10px;
+    background-color: #111111;
+    border-style: outset;
+}
+#audio-controls-container > * {
+    border: none;
+    background-color: transparent;
+}
+option { color: #111111; }
+hr { width: 100%; }

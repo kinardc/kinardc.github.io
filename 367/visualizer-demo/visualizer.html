@@ -1,0 +1,51 @@
+<!-- 
+Chase Kinard
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <title>Kinard - ThreeJS Voronoi Demo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/x-icon" href="../../gvsu-icon.ico"/>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Megrim">
+    <link rel="stylesheet" href="visualizer.css">
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@latest/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@latest/examples/jsm/"
+            }
+        }
+    </script>
+    <script type="module" src="visualizer.js"></script>
+</head>
+
+<body>
+    <div id="visualizer-controls">
+        <div id="audio-controls-container">
+            <audio controls id="audio-controls"></audio>
+            <label for="track-select"></label>
+            <select name="track-select" id="track-select">
+                <option value="default" selected hidden disabled>Choose a song...</option>
+                <option value="audio/control.mp3">control.mp3</option>
+                <option value="audio/things-id-do-for-u.mp3">things-id-do-for-u.mp3</option>
+            </select>
+        </div>
+        <hr>
+        <label for="amplitude-slider">Amplitude: </label>
+        <input type="range" min="0.0" step="0.01" max="2.0" value="0.75" class="slider" id="amplitude-slider">
+        <hr>
+        <label for="movement-slider">Movement: </label>
+        <input type="range" min="0.0" step="0.01" max="1.0" value="0.1" class="slider" id="movement-slider">
+        <hr>
+        <span>
+            <label for="absolute-checkbox">Absolute Offset: </label>
+            <input type="checkbox" id="absolute-checkbox" name="absolute-checkbox" value="on">
+        </span>
+    </div>
+</body>
+
+</html>
