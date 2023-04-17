@@ -1,7 +1,6 @@
 import * as THREE from 'three';
-import { Delaunay } from "https://cdn.skypack.dev/d3-delaunay@6";
 import { createNoise2D } from "https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/+esm";
-import { avg, max, modulate } from './helpers.mjs';
+import { avg, max, mirrorArray, modulate } from './helpers.mjs';
 
 /* Important Variables */
 const noise = createNoise2D();
@@ -62,9 +61,35 @@ function getPointsMesh(points, color) {
         mesh = new THREE.Points(geometry, material);
     return mesh;
 }
+
+const uniforms = {
+    u_time: { value: 0.0 },
+    u_resolution:  { value: new THREE.Vector3(windowWidth, windowHeight, 1) },
+}
 function getLineLoopMesh(points, color) {
     const geometry = new THREE.BufferGeometry().setFromPoints(points),
-        material = new THREE.PointsMaterial({ color: color, size: 5 }),
+        material = new THREE.LineBasicMaterial({ color: color }),
+        // material = new THREE.ShaderMaterial({
+        //     uniforms: uniforms,
+        //     vertexShader: `
+        //         varying vec2 v_uv;
+        //         void main() {
+        //             v_uv = uv;
+        //             gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+        //         }
+        //     `,
+        //     fragmentShader: `
+        //         precision mediump float;
+        //         uniform float u_time;
+        //         uniform vec3 u_resolution;
+        //         void main() {
+        //             // Get current pixel position.
+        //             vec2 currentPixel = fragCoord.xy / u_resolution.xy;
+        //             currentPixel = currentPixel * (u_resolution.x / u_resolution.y);
+        //             gl_FragColor = vec4(0.0, cos(u_time * 5.0) + 0.5, sin(u_time * 5.0) + 0.5, 1.0).rgba;  
+        //         }
+        //     `
+        // }),
         mesh = new THREE.LineLoop(geometry, material);
     return mesh;
 }
@@ -76,7 +101,8 @@ function updateMeshGeometry(mesh, data, points, options = {}) {
         step = 2 * Math.PI / points.length;
     for (let i = 0, p = 0; i <= points.length; ++i) {
         const theta = step * i,
-            frequency = max(data), // avg(data),
+            freqMod = [ data[i % data.length], avg(data), max(data) ],
+            frequency = freqMod[options.frequencyType],
             [newX, newY] = updatePoint(points[i % points.length], frequency, theta, 0.5, options);
         positions[p++] = newX;
         positions[p++] = newY;
@@ -87,7 +113,7 @@ function updateMeshGeometry(mesh, data, points, options = {}) {
 
 
 
-function updatePoint(point, freq, theta, radius, { amplitude = 1, movement = 0.1, absolute = false } = {}) {
+function updatePoint(point, freq, theta, radius, { amplitude = 1, movement = 0.1, absolute = false, frequencyType = 0 } = {}) {
     const maxFrequency = 255,
         time = clock.getElapsedTime(),
         x = point.x, y = point.y,
@@ -125,7 +151,7 @@ function initRenderer() {
 
 function start() {
 
-    var options = { amplitude: 1, movement: 0.1, absolute: false };
+    var options = { amplitude: 1, movement: 0.1, absolute: false, frequencyType: 0 };
 
     window.onload = function () {
         /* Controls */
@@ -144,6 +170,10 @@ function start() {
         const absoluteCheckbox = document.getElementById('absolute-checkbox');
         absoluteCheckbox.checked = false;
         absoluteCheckbox.addEventListener('change', function () { options.absolute = !options.absolute; });
+
+        const frequencySlider = document.getElementById('frequency-slider');
+        frequencySlider.value = 0;
+        frequencySlider.addEventListener('input', function () { options.frequencyType = frequencySlider.value; });
     };
 
     /* Scene */
@@ -156,9 +186,9 @@ function start() {
     camera.lookAt(0, 0, 0);
 
     /* Points */
-    var outerPoints = generateCircumferencePoints(128, 1.5),
-        middlePoints = generateCircumferencePoints(128, 1.0),
-        innerPoints = generateCircumferencePoints(128, 0.5);
+    var outerPoints = generateCircumferencePoints(256*0.75, 1.5),
+        middlePoints = generateCircumferencePoints(256*0.75, 1.0),
+        innerPoints = generateCircumferencePoints(256*0.75, 0.5);
 
     /* Meshes */
     var outerMesh = getLineLoopMesh(outerPoints, 0xFFFF00),
@@ -175,20 +205,28 @@ function start() {
     const audio = document.getElementById('audio-controls');
     audio.addEventListener('playing', function () {
         /* Audio */
-        const fftSize = 256,
-            [ , , analyzer, bufferSize, buffer ] = initAudio(audio, fftSize);
-        console.log(`Playing ${ audio.src }!`);
+        const fftSize = 512,
+            [, , analyzer, bufferSize, buffer] = initAudio(audio, fftSize);
+        console.log(`Playing ${audio.src}!`);
         audio.play();
         /* Animate */
         function animate() {
             // scene.clear();
             analyzer.getByteFrequencyData(buffer);
-            var lowerHalfArray = buffer.slice(0, (bufferSize / 3)),
-                middleHalfArray = buffer.slice((bufferSize / 3) - 1, bufferSize - 1 - (bufferSize / 3)),
-                upperHalfArray = buffer.slice(2 * (bufferSize / 3) - 1, bufferSize - 1);
+            const trimmedArray = buffer.slice(0, bufferSize * 0.75),
+                trimmedLength = trimmedArray.length;
+            var lowerHalfArray = mirrorArray(trimmedArray.slice(0, (trimmedLength / 2))),
+                middleHalfArray = mirrorArray(trimmedArray.slice((trimmedLength / 4) - 1, trimmedLength - (trimmedLength / 4))),
+                upperHalfArray = mirrorArray(trimmedArray.slice((trimmedLength / 2) - 1, trimmedLength));
             updateMeshGeometry( outerMesh, lowerHalfArray, outerPoints, options );
             updateMeshGeometry( middleMesh, middleHalfArray, middlePoints, options );
             updateMeshGeometry( innerMesh, upperHalfArray, innerPoints, options );
+            
+            // uniforms.u_time.value = clock.getElapsedTime();
+            // outerMesh.material.needsUpdate = true;
+            // middleMesh.material.needsUpdate = true;
+            // innerMesh.material.needsUpdate = true;
+
             requestAnimationFrame( animate );
             renderer.render( scene, camera );
         }
