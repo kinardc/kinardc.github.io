@@ -1,5 +1,6 @@
 <!-- 
 Chase Kinard
+ - Structure/imports for the audio visualizer and its control panel.
 -->
 <!DOCTYPE html>
 <html lang="en">
@@ -24,11 +25,13 @@ Chase Kinard
 </head>
 
 <body>
+    <!-- Control Panel Structure -->
     <div id="visualizer-controls">
         <div id="audio-controls-container">
             <audio controls id="audio-controls"></audio>
             <label for="track-select"></label>
             <select name="track-select" id="track-select">
+                <!-- Initialize with no song selected. -->
                 <option value="default" selected hidden disabled>Choose a song...</option>
                 <option value="audio/Astronomyy - Things I'd Do For U.mp3">Astronomyy - Things I'd Do For U</option>
                 <option value="audio/Ed Sheeran - I See Fire (Kygo Remix).mp3">Ed Sheeran - I See Fire (Kygo Remix)</option>
